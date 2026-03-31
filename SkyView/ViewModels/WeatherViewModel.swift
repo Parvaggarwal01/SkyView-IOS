@@ -4,6 +4,7 @@ import Combine
 @MainActor
 class WeatherViewModel: ObservableObject {
     @Published var weather: WeatherResponse?
+    @Published var forecast: ForecastResponse?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -15,25 +16,34 @@ class WeatherViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         weather = nil
+        forecast = nil
         defer { isLoading = false }
 
-        let urlString = "https://api.openweathermap.org/data/2.5/weather?q=\(city)&appid=\(apiKey)&units=metric"
+        let weatherURLString = "https://api.openweathermap.org/data/2.5/weather?q=\(city)&appid=\(apiKey)&units=metric"
+        let forecastURLString = "https://api.openweathermap.org/data/2.5/forecast?q=\(city)&appid=\(apiKey)&units=metric"
 
-        guard let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encoded) else {
+        guard let encodedWeather = weatherURLString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let weatherURL = URL(string: encodedWeather),
+              let encodedForecast = forecastURLString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let forecastURL = URL(string: encodedForecast) else {
             errorMessage = "Invalid city name."
             return
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            // Fetch current weather
+            let (weatherData, weatherResponse) = try await URLSession.shared.data(from: weatherURL)
 
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 404 {
+            if let httpResponse = weatherResponse as? HTTPURLResponse, httpResponse.statusCode == 404 {
                 errorMessage = "City not found. Please check the name and try again."
                 return
             }
 
-            weather = try JSONDecoder().decode(WeatherResponse.self, from: data)
+            weather = try JSONDecoder().decode(WeatherResponse.self, from: weatherData)
+            
+            // Fetch forecast
+            let (forecastData, _) = try await URLSession.shared.data(from: forecastURL)
+            forecast = try JSONDecoder().decode(ForecastResponse.self, from: forecastData)
 
         } catch {
             errorMessage = "Something went wrong. Please try again."

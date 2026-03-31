@@ -23,6 +23,6 @@ enum Secrets {
         }
 
         // Fallback: Direct API key (replace this for quick testing)
-        return "OPENWEATHER_API_KEY"
+        return "YOUR_API_KEY_HERE"
     }
 }
